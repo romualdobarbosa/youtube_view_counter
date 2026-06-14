@@ -6,7 +6,16 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from .database import get_engine
+try:
+    # quando importado como pacote (python -m / testes)
+    from .database import get_engine
+except ImportError:
+    # quando executado direto: `streamlit run src/dashboard.py`
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from src.database import get_engine
 
 
 @st.cache_data(ttl=300)
