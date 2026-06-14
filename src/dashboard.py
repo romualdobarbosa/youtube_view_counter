@@ -23,6 +23,15 @@ def load(query: str) -> pd.DataFrame:
     return pd.read_sql(query, get_engine())
 
 
+def table(df: pd.DataFrame) -> None:
+    """Mostra um DataFrame sem o índice e sem a coluna técnica channel_id."""
+    st.dataframe(
+        df.drop(columns=["channel_id"], errors="ignore"),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
 st.set_page_config(page_title="Podcasts BR no YouTube", layout="wide")
 st.title("Podcasts brasileiros no YouTube — insights")
 
@@ -48,7 +57,7 @@ st.plotly_chart(
     px.bar(ranked, x="name", y=metric, title=f"Canais por {metric}"),
     use_container_width=True,
 )
-st.dataframe(ranked, use_container_width=True)
+table(ranked)
 
 # --- Tese: shorts verticais dominam o consumo ---------------------------------
 st.header("Curtos (verticais) vs Longos (horizontais)")
@@ -77,7 +86,7 @@ if not svl.empty:
         ),
         use_container_width=True,
     )
-    st.dataframe(svl, use_container_width=True)
+    table(svl)
 
 # --- Picos de interesse em episódios ------------------------------------------
 st.header("Episódios em destaque")
@@ -88,10 +97,7 @@ with tab_top:
         px.bar(top, x="title", y="views", color="video_type", title="Top 20 vídeos"),
         use_container_width=True,
     )
-    st.dataframe(
-        top[["title", "channel_id", "video_type", "views", "engagement_rate", "views_per_day"]],
-        use_container_width=True,
-    )
+    table(top[["title", "video_type", "views", "engagement_rate", "views_per_day"]])
 with tab_spikes:
     if vgrowth.empty:
         st.info("Picos exigem ao menos 2 coletas. Rode `python -m src.main` novamente mais tarde.")
@@ -101,7 +107,7 @@ with tab_spikes:
             px.bar(spikes, x="title", y="views_delta", title="Maiores saltos de views entre coletas"),
             use_container_width=True,
         )
-        st.dataframe(spikes, use_container_width=True)
+        table(spikes)
 
 # --- Crescimento de inscritos -------------------------------------------------
 st.header("Crescimento de inscritos")
@@ -117,7 +123,7 @@ else:
         ),
         use_container_width=True,
     )
-    st.dataframe(growth, use_container_width=True)
+    table(growth)
 
 # --- Cadência de upload -------------------------------------------------------
 st.header("Cadência de upload")
@@ -129,4 +135,4 @@ if not cadence.empty:
         px.bar(cad, x="dia", y="avg_views", color="channel_id", title="Views médias por dia de publicação"),
         use_container_width=True,
     )
-    st.dataframe(cad, use_container_width=True)
+    table(cad)
