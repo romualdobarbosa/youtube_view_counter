@@ -38,33 +38,34 @@ CHANNELS: list[str] = [
     "@flowpodcast",
     "@podpah",
     "@inteligencialtda",
-    "@ossociospodcast",
+    "@ossocios",  # corrigido: @ossociospodcast dava 404
     "@Ticaracaticast",
-    "@VenusPodcast",
+    "UCTBhsXf_XRxk8w4rMj6WBOA",  # Venus Podcast: handle @VenusPodcast não resolve; usando o ID do canal
     "@Poddelas",
-    "@3irmaospodcast",
+    "@podcast3irmaos",  # corrigido: @3irmaospodcast dava 404
     "@CafecomDeusPai",
     "@Jovemnerd",
     "@quebrandootabu",
     "@PrimoCast",
     "@GroselhaTalk",
     "@naoinviabilize",
-    "@Achismos",
-    "@BoraVarsavPodcastJP",
+    "@AchismosTV",  # corrigido: @Achismos dava 404
     "@PodPeople",
     "@DevsCafe",
     "@HipstersPontoTech",
     "@cienciasemfim",
-    "@FalaGloboNews",
     "@JotaJotaPodcast",
-    "@PautaPilantra",
     "@maoneca",
     "@PocCast",
-    "@Que_Histori",
     "@LinhasCruzadasOficial",
     "@modusoperandipodcast",
-    "@boemiapodcast",
     "@papagaiopodcast",
+    # --- Handles não resolvidos na verificação (HTTP 404); descomente após corrigir ---
+    # "@BoraVarsavPodcastJP",  # Jota Jota Podcast já coberto por @JotaJotaPodcast / @JoelJota
+    # "@FalaGloboNews",        # nenhum canal de podcast "Fala GloboNews" encontrado
+    # "@PautaPilantra",        # canal não localizado
+    # "@Que_Histori",          # "Que História!" sem canal próprio claro
+    # "@boemiapodcast",        # @Boemiaoficial encontrado, mas é banda de música, não o podcast
 ]
 
 # Vídeos com duração <= este limiar (segundos) são classificados como "short".
