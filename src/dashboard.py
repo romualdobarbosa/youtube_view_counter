@@ -23,13 +23,49 @@ def load(query: str) -> pd.DataFrame:
     return pd.read_sql(query, get_engine())
 
 
+# Rótulos amigáveis para colunas técnicas (usados em tabelas e eixos dos gráficos).
+COLUMN_LABELS = {
+    "name": "Canal",
+    "handle": "Handle",
+    "video_count": "Nº de vídeos",
+    "videos": "Nº de vídeos",
+    "total_views": "Views totais",
+    "avg_views": "Média de views",
+    "avg_engagement_rate": "Engajamento médio",
+    "short_count": "Shorts",
+    "long_count": "Longos",
+    "video_type": "Tipo",
+    "catalog_share": "% do catálogo",
+    "views_share": "% das views",
+    "title": "Título",
+    "views": "Views",
+    "engagement_rate": "Engajamento",
+    "like_rate": "Taxa de likes",
+    "comment_rate": "Taxa de comentários",
+    "views_per_day": "Views/dia",
+    "likes": "Likes",
+    "comments": "Comentários",
+    "favorites": "Favoritos",
+    "duration_seconds": "Duração (s)",
+    "category_id": "Categoria",
+    "published_at": "Publicado em",
+    "collected_at": "Coleta",
+    "prev_collected_at": "Coleta anterior",
+    "subscriber_count": "Inscritos",
+    "subscriber_delta": "Δ inscritos",
+    "total_views_delta": "Δ views totais",
+    "views_delta": "Δ views",
+    "views_per_day_delta": "Δ views/dia",
+    "uploads": "Uploads",
+    "weekday": "Dia (nº)",
+    "dia": "Dia",
+}
+
+
 def table(df: pd.DataFrame) -> None:
-    """Mostra um DataFrame sem o índice e sem a coluna técnica channel_id."""
-    st.dataframe(
-        df.drop(columns=["channel_id"], errors="ignore"),
-        use_container_width=True,
-        hide_index=True,
-    )
+    """Mostra um DataFrame sem o índice, sem channel_id e com rótulos amigáveis."""
+    df = df.drop(columns=["channel_id"], errors="ignore").rename(columns=COLUMN_LABELS)
+    st.dataframe(df, use_container_width=True, hide_index=True)
 
 
 st.set_page_config(page_title="Podcasts BR no YouTube", layout="wide")
@@ -51,10 +87,17 @@ st.header("Ranking de canais")
 metric = st.selectbox(
     "Ordenar por",
     ["total_views", "avg_views", "avg_engagement_rate", "video_count"],
+    format_func=lambda c: COLUMN_LABELS.get(c, c),
 )
 ranked = ranking.sort_values(metric, ascending=False)
 st.plotly_chart(
-    px.bar(ranked, x="name", y=metric, title=f"Canais por {metric}"),
+    px.bar(
+        ranked,
+        x="name",
+        y=metric,
+        title=f"Canais por {COLUMN_LABELS.get(metric, metric)}",
+        labels=COLUMN_LABELS,
+    ),
     use_container_width=True,
 )
 table(ranked)
@@ -83,6 +126,7 @@ if not svl.empty:
             color="video_type",
             barmode="group",
             title="Participação no catálogo vs participação nas views",
+            labels=COLUMN_LABELS,
         ),
         use_container_width=True,
     )
@@ -94,7 +138,7 @@ tab_top, tab_spikes = st.tabs(["Top por views", "Picos (velocity)"])
 with tab_top:
     top = latest.sort_values("views", ascending=False).head(20)
     st.plotly_chart(
-        px.bar(top, x="title", y="views", color="video_type", title="Top 20 vídeos"),
+        px.bar(top, x="title", y="views", color="video_type", title="Top 20 vídeos", labels=COLUMN_LABELS),
         use_container_width=True,
     )
     table(top[["title", "video_type", "views", "engagement_rate", "views_per_day"]])
@@ -104,7 +148,7 @@ with tab_spikes:
     else:
         spikes = vgrowth.sort_values("views_delta", ascending=False).head(20)
         st.plotly_chart(
-            px.bar(spikes, x="title", y="views_delta", title="Maiores saltos de views entre coletas"),
+            px.bar(spikes, x="title", y="views_delta", title="Maiores saltos de views entre coletas", labels=COLUMN_LABELS),
             use_container_width=True,
         )
         table(spikes)
@@ -120,6 +164,7 @@ else:
             x="name",
             y="subscriber_delta",
             title="Δ inscritos entre coletas",
+            labels=COLUMN_LABELS,
         ),
         use_container_width=True,
     )
@@ -129,10 +174,17 @@ else:
 st.header("Cadência de upload")
 if not cadence.empty:
     dias = {0: "Dom", 1: "Seg", 2: "Ter", 3: "Qua", 4: "Qui", 5: "Sex", 6: "Sáb"}
-    cad = cadence.copy()
+    cad = cadence.merge(ranking[["channel_id", "name"]], on="channel_id", how="left")
     cad["dia"] = cad["weekday"].map(dias)
     st.plotly_chart(
-        px.bar(cad, x="dia", y="avg_views", color="channel_id", title="Views médias por dia de publicação"),
+        px.bar(
+            cad,
+            x="dia",
+            y="avg_views",
+            color="name",
+            title="Views médias por dia de publicação",
+            labels=COLUMN_LABELS,
+        ),
         use_container_width=True,
     )
-    table(cad)
+    table(cad.drop(columns=["weekday"]))
