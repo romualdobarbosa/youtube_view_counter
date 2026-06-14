@@ -41,25 +41,19 @@ CHANNELS: list[str] = [
     "@ossocios",  # corrigido: @ossociospodcast dava 404
     "@Ticaracaticast",
     "UCTBhsXf_XRxk8w4rMj6WBOA",  # Venus Podcast: handle @VenusPodcast não resolve; usando o ID do canal
-    "@Poddelas",
     "@podcast3irmaos",  # corrigido: @3irmaospodcast dava 404
-    "@CafecomDeusPai",
+    "@juniorrostirola",  # Café com Deus Pai (corrigido: @CafecomDeusPai era canal homônimo)
     "@Jovemnerd",
     "@quebrandootabu",
     "@PrimoCast",
     "@GroselhaTalk",
     "@naoinviabilize",
     "@AchismosTV",  # corrigido: @Achismos dava 404
-    "@PodPeople",
-    "@DevsCafe",
-    "@HipstersPontoTech",
     "@cienciasemfim",
-    "@JotaJotaPodcast",
-    "@maoneca",
-    "@PocCast",
-    "@LinhasCruzadasOficial",
-    "@modusoperandipodcast",
-    "@papagaiopodcast",
+    "@JoelJota",  # Jota Jota Podcast (corrigido: @JotaJotaPodcast era canal homônimo)
+    "@poccastofc",  # PocCast (corrigido: @PocCast era canal homônimo)
+    "@Moduspod",  # Modus Operandi (corrigido: @modusoperandipodcast era canal homônimo)
+    "@podcastpapagaiofalante",  # Papagaio Falante (corrigido: @papagaiopodcast era homônimo)
 ]
 
 # Vídeos com duração <= este limiar (segundos) são classificados como "short".
