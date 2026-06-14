@@ -60,12 +60,6 @@ CHANNELS: list[str] = [
     "@LinhasCruzadasOficial",
     "@modusoperandipodcast",
     "@papagaiopodcast",
-    # --- Handles não resolvidos na verificação (HTTP 404); descomente após corrigir ---
-    # "@BoraVarsavPodcastJP",  # Jota Jota Podcast já coberto por @JotaJotaPodcast / @JoelJota
-    # "@FalaGloboNews",        # nenhum canal de podcast "Fala GloboNews" encontrado
-    # "@PautaPilantra",        # canal não localizado
-    # "@Que_Histori",          # "Que História!" sem canal próprio claro
-    # "@boemiapodcast",        # @Boemiaoficial encontrado, mas é banda de música, não o podcast
 ]
 
 # Vídeos com duração <= este limiar (segundos) são classificados como "short".
