@@ -1,0 +1,26 @@
+services:
+  # Dashboard Streamlit — serviço de longa duração, é o que sobe por padrão.
+  dashboard:
+    build: .
+    image: youtube-view-counter:latest
+    command: ["streamlit", "run", "src/dashboard.py", "--server.address=0.0.0.0"]
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data:z
+      - ./logs:/app/logs:z
+    restart: unless-stopped
+
+  # Ingestão — job sob demanda (não fica rodando). Fica atrás do profile "ingest"
+  # para não consumir cota da API a cada `docker compose up`; dispare com:
+  #   docker compose --profile ingest run --rm ingest
+  ingest:
+    build: .
+    image: youtube-view-counter:latest
+    command: ["python", "-m", "src.main"]
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data:z
+      - ./logs:/app/logs:z
+    profiles: ["ingest"]

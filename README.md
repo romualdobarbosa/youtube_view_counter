@@ -9,6 +9,7 @@
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-red)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
 
 ---
 
@@ -72,6 +73,8 @@ src/
 
 ## Como rodar
 
+### Via pip (ambiente local)
+
 ```bash
 pip install -r requirements.txt
 cp .env.example .env          # preencha YOUTUBE_API_KEY (Google Cloud Console)
@@ -82,13 +85,37 @@ python -m src.ranking --by views --shorts
 streamlit run src/dashboard.py
 ```
 
-> 💡 Rodar `python -m src.main` periodicamente acumula snapshots. As análises de crescimento e
-> de picos (`v_channel_growth`, `v_video_growth`) precisam de **pelo menos 2 coletas**.
+### Via Docker / Docker Compose
+
+```bash
+cp .env.example .env          # preencha YOUTUBE_API_KEY (Google Cloud Console)
+
+docker compose up -d dashboard              # sobe o dashboard em http://localhost:8501
+docker compose --profile ingest run --rm ingest   # roda a ingestão sob demanda
+```
+
+- `dashboard` é o único serviço que sobe por padrão (`docker compose up`) — ele só lê
+  `data/youtube.db`, nunca chama a API do YouTube.
+- `ingest` fica atrás do profile `ingest` de propósito: assim `docker compose up` nunca
+  consome cota da API sem você pedir explicitamente.
+- Os dois serviços compartilham `./data` e `./logs` via bind mount, então uma coleta feita
+  pelo `ingest` fica disponível para o `dashboard` imediatamente (o dashboard cacheia por
+  5 min — veja `@st.cache_data(ttl=300)` em `dashboard.py`).
+- Em distros com SELinux enforcing (Fedora, RHEL, CentOS) os volumes já usam a flag `:z`
+  no `docker-compose.yml`, necessária para o container conseguir escrever nos bind mounts.
+- A imagem usa `requirements-docker.txt` (subconjunto enxuto de `requirements.txt`, só com
+  as libs de runtime) para não carregar Jupyter/notebook/etc. — bagagem de ambiente de dev
+  que não pertence à imagem de produção.
+
+> 💡 Rodar a ingestão periodicamente (`python -m src.main` local ou
+> `docker compose --profile ingest run --rm ingest`) acumula snapshots. As análises de
+> crescimento e de picos (`v_channel_growth`, `v_video_growth`) precisam de **pelo menos
+> 2 coletas**.
 
 ## Stack
 
 `Python` · `SQLAlchemy 2.0` · `SQLite` · `google-api-python-client` · `tenacity` · `pandas` ·
-`plotly` · `Streamlit` · `python-dotenv`
+`plotly` · `Streamlit` · `python-dotenv` · `Docker` / `Docker Compose`
 
 ## Roadmap
 

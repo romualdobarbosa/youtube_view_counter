@@ -1,0 +1,11 @@
+# Dependências de runtime da imagem Docker (ingestão + dashboard).
+# Enxuto de propósito: requirements.txt (raiz) é o pip freeze completo do
+# ambiente de dev (Jupyter, notebook, etc.) e continua sendo o usado para
+# `pip install -r requirements.txt` local. Este arquivo só existe para a imagem.
+SQLAlchemy==2.0.48
+google-api-python-client==2.193.0
+pandas==3.0.1
+plotly==6.6.0
+python-dotenv==1.2.2
+streamlit==1.56.0
+tenacity==9.1.4

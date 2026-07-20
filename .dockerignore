@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.git/
+.github/
+.vscode/
+data/
+logs/
+models/
+.env
+*.md
+requirements.txt
