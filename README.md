@@ -112,13 +112,27 @@ docker compose --profile ingest run --rm ingest   # roda a ingestão sob demanda
 > crescimento e de picos (`v_channel_growth`, `v_video_growth`) precisam de **pelo menos
 > 2 coletas**.
 
+## Testes
+
+```bash
+pytest
+```
+
+Cobre as funções de persistência (`upsert_channel_scd2`, `upsert_video_scd2`, inserts de fato)
+e a orquestração da ingestão (`main.run`) — sem chamar a YouTube Data API de verdade: a camada
+`api.py` é mockada com dados fake, e cada teste roda contra um SQLite temporário isolado
+(`tests/conftest.py`), nunca contra `data/youtube.db`. Os testes validam o comportamento SCD2
+(nova versão criada quando um atributo versionado muda, idempotência quando nada muda) e que a
+ingestão persiste exatamente os dados retornados pela API, além de tolerar falha de um canal
+sem derrubar a coleta dos demais.
+
 ## Stack
 
 `Python` · `SQLAlchemy 2.0` · `SQLite` · `google-api-python-client` · `tenacity` · `pandas` ·
-`plotly` · `Streamlit` · `python-dotenv` · `Docker` / `Docker Compose`
+`plotly` · `Streamlit` · `python-dotenv` · `Docker` / `Docker Compose` · `pytest`
 
 ## Roadmap
 
 - [ ] Agendar a ingestão (cron / GitHub Actions) para alimentar o histórico SCD2 automaticamente
-- [ ] Testes automatizados das funções de upsert SCD2
+- [x] Testes automatizados das funções de upsert SCD2
 - [ ] Exportar as views para um modelo de BI (dbt / Metabase)
