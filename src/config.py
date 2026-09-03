@@ -31,29 +31,39 @@ def get_api_key() -> str:
     return key
 
 
+# Store da ingestão de podcasts: "local" (arquivo data/youtube.db, padrão — usado
+# nos testes e no dev local) ou "turso" (banco gerenciado libSQL, necessário pra
+# rodar via GitHub Actions, já que o runner é efêmero e não tem onde persistir um
+# arquivo entre execuções).
+DB_BACKEND = os.environ.get("DB_BACKEND", "local")
+TURSO_DATABASE_URL = os.environ.get("TURSO_DATABASE_URL")
+TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN")
+
+
+def get_turso_credentials() -> tuple[str, str]:
+    """Retorna (TURSO_DATABASE_URL, TURSO_AUTH_TOKEN) ou levanta erro amigável."""
+    if not TURSO_DATABASE_URL or not TURSO_AUTH_TOKEN:
+        raise RuntimeError(
+            "DB_BACKEND=turso mas TURSO_DATABASE_URL/TURSO_AUTH_TOKEN não estão "
+            "definidos. Crie um banco Turso (turso db create ...) e preencha o "
+            ".env (veja .env.example)."
+        )
+    return TURSO_DATABASE_URL, TURSO_AUTH_TOKEN
+
+
 # Canais de podcast brasileiros. Aceita "@handle" ou "UCxxxx" — get_channel_full resolve os dois.
-# IMPORTANTE: verifique os @handles antes da ingestão real. main.py é tolerante a falhas:
-# um handle inexistente é logado e pulado, sem derrubar a coleta dos demais.
+#
+# Top 5 por inscritos (de uma lista original de 19 — reduzido pra caber num cron
+# diário razoável rodando contra Turso: cada escrita é um round-trip de rede,
+# ~0.2s/vídeo mesmo em lote — ver README > "Por que dois stores" e o commit que
+# reduziu a lista. 19 canais = ~46 mil vídeos = horas por execução; os 5 abaixo =
+# ~19.500 vídeos = minutos. Os mais relevantes (mais inscritos) ficaram.
 CHANNELS: list[str] = [
-    "@flowpodcast",
-    "@podpah",
-    "@inteligencialtda",
-    "@ossocios",  # corrigido: @ossociospodcast dava 404
-    "@Ticaracaticast",
-    "UCTBhsXf_XRxk8w4rMj6WBOA",  # Venus Podcast: handle @VenusPodcast não resolve; usando o ID do canal
-    "@podcast3irmaos",  # corrigido: @3irmaospodcast dava 404
-    "@juniorrostirola",  # Café com Deus Pai (corrigido: @CafecomDeusPai era canal homônimo)
-    "@Jovemnerd",
-    "@quebrandootabu",
-    "@PrimoCast",
-    "@GroselhaTalk",
-    "@naoinviabilize",
-    "@AchismosTV",  # corrigido: @Achismos dava 404
-    "@cienciasemfim",
-    "@JoelJota",  # Jota Jota Podcast (corrigido: @JotaJotaPodcast era canal homônimo)
-    "@poccastofc",  # PocCast (corrigido: @PocCast era canal homônimo)
-    "@Moduspod",  # Modus Operandi (corrigido: @modusoperandipodcast era canal homônimo)
-    "@podcastpapagaiofalante",  # Papagaio Falante (corrigido: @papagaiopodcast era homônimo)
+    "@podpah",           # Podpah TV — 10,2M inscritos
+    "@flowpodcast",      # Flow Podcast — 6,19M
+    "@inteligencialtda", # Inteligência Ltda — 5,77M
+    "@AchismosTV",       # AchismosTV — 5,44M (corrigido: @Achismos dava 404)
+    "@Ticaracaticast",   # TICARACATICAST — 3,01M
 ]
 
 # Vídeos com duração <= este limiar (segundos) são classificados como "short".

@@ -1,0 +1,47 @@
+name: Ingestão de podcasts (SCD2 + dbt)
+
+# Coleta os canais de podcast (src/main.py), escreve no Turso (DB_BACKEND=turso) e
+# roda a camada dbt (dbt/) por cima — schema tests + os 2 testes singulares que
+# validam a invariante SCD2. Roda diário; o runner é efêmero, a persistência vive
+# no Turso (ver README > "Por que dois stores").
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # 06:00 UTC = 03:00 BRT
+  workflow_dispatch:
+
+jobs:
+  ingest-and-transform:
+    runs-on: ubuntu-latest
+    # Medido contra um Turso real: ~0.2s/vídeo (cada escrita é 1 round-trip de
+    # rede). Os 5 canais (~19,5 mil vídeos) ficam em minutos-a-1h em regime de
+    # cruzeiro; o 1º dia (tudo novo) fica mais perto de 2h. 240min de folga.
+    timeout-minutes: 240
+    env:
+      DB_BACKEND: turso
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+      TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # dbt-sqlite (dbt/requirements.txt) exige 3.11/3.12 — fixando aqui
+          # cobre os dois passos (ingestão não liga pra versão de Python).
+          python-version: "3.11"
+
+      - name: Instala dependências da ingestão
+        run: pip install -r requirements-docker.txt
+
+      - name: Ingestão -> Turso
+        run: python -m src.main
+
+      - name: Instala dependências do dbt (podcasts)
+        run: pip install -r dbt/requirements.txt
+
+      - name: Espelha Turso -> SQLite local (dbt-sqlite só lê arquivo local)
+        run: python dbt/sync_replica.py
+
+      - name: dbt run + dbt test
+        run: cd dbt && dbt run --profiles-dir . && dbt test --profiles-dir .
