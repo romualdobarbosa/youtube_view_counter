@@ -1,0 +1,15 @@
+# Sem segredos aqui (só caminho de arquivo SQLite) — por isso commitado junto com o
+# projeto, ao contrário do profiles.yml "normal" do dbt (que costuma guardar
+# credenciais e ficar fora do repo). Rodar sempre com --profiles-dir . (ou
+# DBT_PROFILES_DIR=dbt), a partir desta pasta.
+podcasts_br:
+  target: dev
+  outputs:
+    dev:
+      type: sqlite
+      threads: 1
+      database: 'database'
+      schema: 'main'
+      schemas_and_paths:
+        main: '../data/youtube.db'
+      schema_directory: '../data'

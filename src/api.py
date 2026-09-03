@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from datetime import date, datetime
 from typing import Any
 
 from googleapiclient.discovery import build
@@ -131,6 +132,48 @@ def get_playlist_video_ids(youtube, playlist_id: str) -> list[str]:
         if not page_token:
             break
     return video_ids
+
+
+def get_playlist_video_ids_since(
+    youtube, playlist_id: str, since: date
+) -> list[str]:
+    """Pagina a playlist de uploads e para assim que encontrar um vídeo publicado
+    antes de `since` — evita paginar o catálogo inteiro em canais com anos de
+    conteúdo quando só interessa uma janela recente. Assume a ordem padrão da API
+    (mais recente primeiro); se o primeiro item de uma página já for mais antigo
+    que `since`, para sem coletar nada daquela página.
+    """
+    video_ids: list[str] = []
+    page_token: str | None = None
+    while True:
+        resp = _execute(
+            youtube.playlistItems().list(
+                part="contentDetails",
+                playlistId=playlist_id,
+                maxResults=50,
+                pageToken=page_token,
+            )
+        )
+        reached_since = False
+        for item in resp.get("items", []):
+            content = item.get("contentDetails", {})
+            published_at = content.get("videoPublishedAt")
+            if published_at and _parse_iso_date(published_at) < since:
+                reached_since = True
+                break
+            vid = content.get("videoId")
+            if vid:
+                video_ids.append(vid)
+        if reached_since:
+            break
+        page_token = resp.get("nextPageToken")
+        if not page_token:
+            break
+    return video_ids
+
+
+def _parse_iso_date(iso_datetime: str) -> date:
+    return datetime.fromisoformat(iso_datetime.replace("Z", "+00:00")).date()
 
 
 def _chunks(seq: list[str], size: int):

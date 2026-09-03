@@ -1,0 +1,29 @@
+name: 'copa2026'
+version: '1.0.0'
+config-version: 2
+profile: 'copa2026'
+
+model-paths: ["models"]
+test-paths: ["tests"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  copa2026:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table
+
+# Janelas de análise — única fonte de verdade da fronteira das datas no lado dbt
+# (copa2026/config.py tem os mesmos valores do lado da ingestão; mudar uma janela
+# não exige recoletar dados, só rodar `dbt run` de novo).
+vars:
+  pre_copa_start: '2026-05-01'
+  pre_copa_end: '2026-06-10'
+  copa_start: '2026-06-11'
+  copa_end: '2026-07-19'
+  pos_copa_start: '2026-07-20'
+  pos_copa_end: '2026-08-31'

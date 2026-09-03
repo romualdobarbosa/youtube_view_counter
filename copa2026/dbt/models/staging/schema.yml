@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: stg_copa_videos
+    description: Um vídeo por linha, com engagement rate e janela (Pré-Copa/Copa/Pós-Copa) calculados.
+    columns:
+      - name: video_id
+        tests:
+          - unique
+          - not_null
+      - name: time_window
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Pré-Copa', 'Copa', 'Pós-Copa']

@@ -10,11 +10,11 @@ from .database import get_engine
 
 
 def channel_ranking() -> pd.DataFrame:
-    return pd.read_sql("SELECT * FROM v_channel_ranking", get_engine())
+    return pd.read_sql("SELECT * FROM channel_ranking", get_engine())
 
 
 def short_vs_long() -> pd.DataFrame:
-    return pd.read_sql("SELECT * FROM v_short_vs_long", get_engine())
+    return pd.read_sql("SELECT * FROM short_vs_long", get_engine())
 
 
 def main() -> None:

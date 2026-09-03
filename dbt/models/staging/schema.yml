@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: stg_channels
+    description: Um registro por canal (versão vigente do SCD2).
+    columns:
+      - name: channel_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_videos
+    description: Um registro por vídeo (versão vigente do SCD2).
+    columns:
+      - name: video_id
+        tests:
+          - unique
+          - not_null
+      - name: video_type
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['short', 'long']
+
+  - name: stg_channel_metrics
+    description: Snapshot de métricas de canal (uma linha por coleta).
+    columns:
+      - name: channel_key
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_channels')
+                field: channel_key
+
+  - name: stg_video_metrics
+    description: Snapshot de métricas de vídeo (uma linha por coleta).
+    columns:
+      - name: video_key
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_videos')
+                field: video_key

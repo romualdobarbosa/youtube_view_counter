@@ -1,0 +1,10 @@
+# Sem segredos — só o caminho do arquivo DuckDB. Commitado junto do projeto, como
+# em dbt/profiles.yml (análise de podcasts). Rodar com --profiles-dir . (ou
+# DBT_PROFILES_DIR=copa2026/dbt), a partir desta pasta.
+copa2026:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: '../../data/copa2026.duckdb'
+      threads: 4

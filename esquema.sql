@@ -62,4 +62,4 @@ CREATE TABLE fact_video_metrics (
 );
 CREATE INDEX ix_fact_video_collected ON fact_video_metrics (video_id, collected_at);
 
--- As views analíticas estão em src/views.sql.
+-- A camada semântica (staging + marts) está no projeto dbt em dbt/models/.

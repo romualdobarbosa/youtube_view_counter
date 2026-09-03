@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      Tabelas raw gravadas pela ingestão Python/SQLAlchemy (src/database.py) —
+      dimensões SCD2 e fatos de snapshot. Este projeto dbt nunca escreve nelas,
+      só lê.
+    schema: main
+    tables:
+      - name: dim_channel
+        description: Dimensão SCD2 de canal (versionada por nome/handle/país).
+      - name: dim_video
+        description: Dimensão SCD2 de vídeo (versionada por título/tipo/categoria/tags).
+      - name: fact_channel_metrics
+        description: Snapshot de métricas de canal a cada coleta.
+      - name: fact_video_metrics
+        description: Snapshot de métricas de vídeo a cada coleta.

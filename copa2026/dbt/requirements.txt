@@ -1,0 +1,8 @@
+# dbt-duckdb acompanha o dbt-core bem mais de perto que o dbt-sqlite (ver dbt/requirements.txt)
+# -- essa combinação funcionou de primeira, testada com dbt run/test tanto em
+# python:3.11-slim quanto no Python 3.14 do host (sem o problema de mashumaro que
+# pegou o dbt-sqlite). Fixado mesmo assim, por reprodutibilidade.
+dbt-core==1.12.3
+dbt-adapters==1.24.5
+dbt-duckdb==1.11.0
+duckdb==1.5.5

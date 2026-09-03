@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      Tabela raw gravada por copa2026/ingest.py — uma coleta única e retroativa
+      (não SCD2: sem histórico de versões, cada run substitui o dataset inteiro).
+    schema: main
+    tables:
+      - name: copa_videos
+        description: Um vídeo por linha, com estatísticas no momento da coleta.

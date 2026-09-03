@@ -16,14 +16,11 @@ from sqlalchemy import (
     create_engine,
     event,
     select,
-    text,
 )
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
-from .config import DATA_DIR, DB_PATH, PROJECT_ROOT, SHORT_MAX_SECONDS
-
-VIEWS_SQL_PATH = PROJECT_ROOT / "src" / "views.sql"
+from .config import DATA_DIR, DB_PATH, SHORT_MAX_SECONDS
 
 
 class Base(DeclarativeBase):
@@ -126,19 +123,12 @@ def get_session() -> Session:
 
 
 def init_db() -> None:
-    """Cria tabelas e (re)cria as views analíticas a partir de views.sql."""
-    engine = get_engine()
-    Base.metadata.create_all(engine)
-    if VIEWS_SQL_PATH.exists():
-        sql = VIEWS_SQL_PATH.read_text(encoding="utf-8")
-        with engine.begin() as conn:
-            for statement in _split_sql(sql):
-                conn.execute(text(statement))
+    """Cria as tabelas raw (dims SCD2 + fatos de snapshot).
 
-
-def _split_sql(sql: str) -> list[str]:
-    """Divide o script em statements executáveis (sqlite3 executa um por vez)."""
-    return [s.strip() for s in sql.split(";") if s.strip()]
+    A camada semântica (views analíticas) não é mais criada aqui — é responsabilidade
+    do projeto dbt em dbt/ (ver dbt/models/), que lê essas tabelas como source.
+    """
+    Base.metadata.create_all(get_engine())
 
 
 # --- helpers SCD2 -------------------------------------------------------------

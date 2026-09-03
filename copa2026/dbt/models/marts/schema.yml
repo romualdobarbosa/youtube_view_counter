@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: channel_window_metrics
+    description: Canal x janela x métricas — a tabela final da análise (persistida como tabela no DuckDB).
+    columns:
+      - name: time_window
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Pré-Copa', 'Copa', 'Pós-Copa']
+      - name: total_views
+        tests:
+          - not_null
+
+  - name: channel_window_comparison
+    description: Uma linha por canal, janelas lado a lado + deltas (Copa vs Pré, Pós vs Copa).
+    columns:
+      - name: channel_id
+        tests:
+          - unique
+          - not_null

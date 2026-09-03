@@ -1,190 +1,153 @@
-"""Dashboard Streamlit: insights sobre canais de podcast brasileiros no YouTube."""
+"""Dashboard Streamlit — página padrão: "Quem ganhou a guerra de relevância no
+YouTube brasileiro durante a Copa do Mundo 2026?"
+
+Lê as tabelas persistidas pelo dbt (copa2026/dbt/models/marts/) no
+data/copa2026.duckdb. A análise secundária (ranking de podcasts BR, mesmo
+pipeline aplicado a outro problema) está em src/pages/.
+"""
 
 from __future__ import annotations
 
+import duckdb
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
 try:
-    # quando importado como pacote (python -m / testes)
-    from .database import get_engine
+    from .config import PROJECT_ROOT
 except ImportError:
-    # quando executado direto: `streamlit run src/dashboard.py`
     import sys
     from pathlib import Path
 
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    from src.database import get_engine
+    from src.config import PROJECT_ROOT
+
+DB_PATH = PROJECT_ROOT / "data" / "copa2026.duckdb"
+
+COLUMN_LABELS = {
+    "channel_name": "Canal",
+    "time_window": "Janela",
+    "video_count": "Nº de vídeos",
+    "total_views": "Views totais",
+    "avg_views": "Média de views",
+    "avg_engagement_rate": "Engajamento médio",
+    "share_of_voice": "Share of voice",
+    "pre_copa_videos": "Vídeos (Pré-Copa)",
+    "pre_copa_views": "Views (Pré-Copa)",
+    "pre_copa_engagement_rate": "Engajamento (Pré-Copa)",
+    "copa_videos": "Vídeos (Copa)",
+    "copa_views": "Views (Copa)",
+    "copa_engagement_rate": "Engajamento (Copa)",
+    "copa_share_of_voice": "Share of voice (Copa)",
+    "pos_copa_videos": "Vídeos (Pós-Copa)",
+    "pos_copa_views": "Views (Pós-Copa)",
+    "pos_copa_engagement_rate": "Engajamento (Pós-Copa)",
+    "views_growth_copa_vs_pre": "Δ views (Copa vs Pré)",
+    "views_growth_pct_copa_vs_pre": "% crescimento (Copa vs Pré)",
+    "engagement_delta_copa_vs_pre": "Δ engajamento (Copa vs Pré)",
+    "views_delta_pos_vs_copa": "Δ views (Pós vs Copa)",
+    "engagement_delta_pos_vs_copa": "Δ engajamento (Pós vs Copa)",
+}
+
+WINDOW_ORDER = ["Pré-Copa", "Copa", "Pós-Copa"]
 
 
 @st.cache_data(ttl=300)
 def load(query: str) -> pd.DataFrame:
-    return pd.read_sql(query, get_engine())
-
-
-# Rótulos amigáveis para colunas técnicas (usados em tabelas e eixos dos gráficos).
-COLUMN_LABELS = {
-    "name": "Canal",
-    "handle": "Handle",
-    "video_count": "Nº de vídeos",
-    "videos": "Nº de vídeos",
-    "total_views": "Views totais",
-    "avg_views": "Média de views",
-    "avg_engagement_rate": "Engajamento médio",
-    "short_count": "Shorts",
-    "long_count": "Longos",
-    "video_type": "Tipo",
-    "catalog_share": "% do catálogo",
-    "views_share": "% das views",
-    "title": "Título",
-    "views": "Views",
-    "engagement_rate": "Engajamento",
-    "like_rate": "Taxa de likes",
-    "comment_rate": "Taxa de comentários",
-    "views_per_day": "Views/dia",
-    "likes": "Likes",
-    "comments": "Comentários",
-    "favorites": "Favoritos",
-    "duration_seconds": "Duração (s)",
-    "category_id": "Categoria",
-    "published_at": "Publicado em",
-    "collected_at": "Coleta",
-    "prev_collected_at": "Coleta anterior",
-    "subscriber_count": "Inscritos",
-    "subscriber_delta": "Δ inscritos",
-    "total_views_delta": "Δ views totais",
-    "views_delta": "Δ views",
-    "views_per_day_delta": "Δ views/dia",
-    "uploads": "Uploads",
-    "weekday": "Dia (nº)",
-    "dia": "Dia",
-}
+    con = duckdb.connect(str(DB_PATH), read_only=True)
+    try:
+        return con.execute(query).df()
+    finally:
+        con.close()
 
 
 def table(df: pd.DataFrame) -> None:
-    """Mostra um DataFrame sem o índice, sem channel_id e com rótulos amigáveis."""
-    df = df.drop(columns=["channel_id"], errors="ignore").rename(columns=COLUMN_LABELS)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(
+        df.drop(columns=["channel_id"], errors="ignore").rename(columns=COLUMN_LABELS),
+        use_container_width=True,
+        hide_index=True,
+    )
 
 
-st.set_page_config(page_title="Podcasts BR no YouTube", layout="wide")
-st.title("Podcasts brasileiros no YouTube — insights")
+st.set_page_config(page_title="Copa 2026 — guerra de relevância no YouTube", layout="wide")
+st.title("Quem ganhou a guerra de relevância no YouTube brasileiro durante a Copa do Mundo 2026?")
+st.caption(
+    "CazéTV, GE TV, N Sports e TNT Sports Brasil — performance por vídeo em 3 janelas: "
+    "Pré-Copa (01/05–10/06), Copa (11/06–19/07) e Pós-Copa (20/07–31/08)."
+)
 
-ranking = load("SELECT * FROM v_channel_ranking")
-svl = load("SELECT * FROM v_short_vs_long")
-latest = load("SELECT * FROM v_latest_video_metrics")
-growth = load("SELECT * FROM v_channel_growth")
-vgrowth = load("SELECT * FROM v_video_growth")
-cadence = load("SELECT * FROM v_upload_cadence")
-
-if ranking.empty:
-    st.warning("Sem dados ainda. Rode `python -m src.main` para coletar.")
+if not DB_PATH.exists():
+    st.warning(
+        "Sem dados ainda. Rode a coleta e a transformação:\n\n"
+        "```\npython -m copa2026.ingest\ncd copa2026/dbt && dbt run && dbt test\n```"
+    )
     st.stop()
 
-# --- Ranking de canais --------------------------------------------------------
-st.header("Ranking de canais")
-metric = st.selectbox(
-    "Ordenar por",
-    ["total_views", "avg_views", "avg_engagement_rate", "video_count"],
-    format_func=lambda c: COLUMN_LABELS.get(c, c),
-)
-ranked = ranking.sort_values(metric, ascending=False)
+with st.expander("Por que 3 janelas de publicação, e não uma curva de inscritos?"):
+    st.markdown(
+        "A YouTube Data API v3 (`channels.list`) só devolve totais **acumulados atuais** "
+        "de inscritos e views — não existe endpoint público com série histórica. Por isso "
+        "a métrica usada é **performance por vídeo publicado em cada janela** (cadência, "
+        "views, engajamento, share of voice), coletada via `playlistItems.list` + "
+        "`videos.list` — não via `search.list`, que custaria ~100x mais cota de API pra "
+        "fazer a mesma coisa."
+    )
+
+comparison = load("SELECT * FROM channel_window_comparison")
+metrics = load("SELECT * FROM channel_window_metrics")
+
+if comparison.empty:
+    st.warning(
+        "Tabelas vazias. Rode `python -m copa2026.ingest` e depois `dbt run` em "
+        "`copa2026/dbt/`."
+    )
+    st.stop()
+
+# --- Share of voice por janela --------------------------------------------------
+st.header("Share of voice: quem dominou cada janela")
+metrics["time_window"] = pd.Categorical(metrics["time_window"], categories=WINDOW_ORDER, ordered=True)
 st.plotly_chart(
     px.bar(
-        ranked,
-        x="name",
-        y=metric,
-        title=f"Canais por {COLUMN_LABELS.get(metric, metric)}",
+        metrics.sort_values("time_window"),
+        x="channel_name",
+        y="share_of_voice",
+        color="time_window",
+        barmode="group",
+        title="% das views totais do grupo, por canal e por janela",
         labels=COLUMN_LABELS,
     ),
     use_container_width=True,
 )
-table(ranked)
+table(metrics.sort_values(["time_window", "total_views"], ascending=[True, False]))
 
-# --- Tese: shorts verticais dominam o consumo ---------------------------------
-st.header("Curtos (verticais) vs Longos (horizontais)")
-st.caption(
-    "Mesmo sendo conteúdo de podcast longo, os shorts costumam capturar uma fatia de "
-    "views muito maior do que sua participação no catálogo."
+# --- Quem cresceu com a Copa -----------------------------------------------------
+st.header("Quem cresceu: Copa vs Pré-Copa")
+growth = comparison.sort_values("views_growth_copa_vs_pre", ascending=False)
+st.plotly_chart(
+    px.bar(
+        growth,
+        x="channel_name",
+        y="views_growth_copa_vs_pre",
+        title="Δ views totais (Copa − Pré-Copa)",
+        labels=COLUMN_LABELS,
+    ),
+    use_container_width=True,
 )
-if not svl.empty:
-    agg = svl.groupby("video_type")[["videos", "total_views"]].sum().reset_index()
-    agg["catalog_share"] = agg["videos"] / agg["videos"].sum()
-    agg["views_share"] = agg["total_views"] / agg["total_views"].sum()
-    comp = agg.melt(
-        id_vars="video_type",
-        value_vars=["catalog_share", "views_share"],
-        var_name="métrica",
-        value_name="proporção",
-    )
-    st.plotly_chart(
-        px.bar(
-            comp,
-            x="métrica",
-            y="proporção",
-            color="video_type",
-            barmode="group",
-            title="Participação no catálogo vs participação nas views",
-            labels=COLUMN_LABELS,
-        ),
-        use_container_width=True,
-    )
-    table(svl)
 
-# --- Picos de interesse em episódios ------------------------------------------
-st.header("Episódios em destaque")
-tab_top, tab_spikes = st.tabs(["Top por views", "Picos (velocity)"])
-with tab_top:
-    top = latest.sort_values("views", ascending=False).head(20)
-    st.plotly_chart(
-        px.bar(top, x="title", y="views", color="video_type", title="Top 20 vídeos", labels=COLUMN_LABELS),
-        use_container_width=True,
-    )
-    table(top[["title", "video_type", "views", "engagement_rate", "views_per_day"]])
-with tab_spikes:
-    if vgrowth.empty:
-        st.info("Picos exigem ao menos 2 coletas. Rode `python -m src.main` novamente mais tarde.")
-    else:
-        spikes = vgrowth.sort_values("views_delta", ascending=False).head(20)
-        st.plotly_chart(
-            px.bar(spikes, x="title", y="views_delta", title="Maiores saltos de views entre coletas", labels=COLUMN_LABELS),
-            use_container_width=True,
-        )
-        table(spikes)
+# --- Quem reteve engajamento depois -----------------------------------------------
+st.header("Quem reteve: Pós-Copa vs Copa")
+retention = comparison.sort_values("engagement_delta_pos_vs_copa", ascending=False)
+st.plotly_chart(
+    px.bar(
+        retention,
+        x="channel_name",
+        y="engagement_delta_pos_vs_copa",
+        title="Δ engajamento médio (Pós-Copa − Copa)",
+        labels=COLUMN_LABELS,
+    ),
+    use_container_width=True,
+)
 
-# --- Crescimento de inscritos -------------------------------------------------
-st.header("Crescimento de inscritos")
-if growth.empty:
-    st.info("Crescimento exige ao menos 2 coletas.")
-else:
-    st.plotly_chart(
-        px.bar(
-            growth.sort_values("subscriber_delta", ascending=False),
-            x="name",
-            y="subscriber_delta",
-            title="Δ inscritos entre coletas",
-            labels=COLUMN_LABELS,
-        ),
-        use_container_width=True,
-    )
-    table(growth)
-
-# --- Cadência de upload -------------------------------------------------------
-st.header("Cadência de upload")
-if not cadence.empty:
-    dias = {0: "Dom", 1: "Seg", 2: "Ter", 3: "Qua", 4: "Qui", 5: "Sex", 6: "Sáb"}
-    cad = cadence.merge(ranking[["channel_id", "name"]], on="channel_id", how="left")
-    cad["dia"] = cad["weekday"].map(dias)
-    st.plotly_chart(
-        px.bar(
-            cad,
-            x="dia",
-            y="avg_views",
-            color="name",
-            title="Views médias por dia de publicação",
-            labels=COLUMN_LABELS,
-        ),
-        use_container_width=True,
-    )
-    table(cad.drop(columns=["weekday"]))
+# --- Tabela comparativa completa --------------------------------------------------
+st.header("Tabela comparativa completa")
+table(comparison.sort_values("copa_share_of_voice", ascending=False))

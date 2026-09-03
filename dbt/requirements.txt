@@ -1,0 +1,9 @@
+# Versões fixas (não soltar o >=): testei "tudo na última versão" e o import do
+# adaptador quebra (dbt-sqlite não acompanha as versões mais novas de dbt-adapters).
+# Esta combinação foi validada de ponta a ponta (dbt debug/run/test) contra uma cópia
+# real de data/youtube.db, dentro de python:3.11-slim.
+#
+# Precisa rodar em Python 3.11/3.12 — dbt-common (via mashumaro) quebra em Python 3.14.
+dbt-core==1.11.14
+dbt-adapters==1.16.7
+dbt-sqlite==1.10.0

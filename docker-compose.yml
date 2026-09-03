@@ -24,3 +24,44 @@ services:
       - ./data:/app/data:z
       - ./logs:/app/logs:z
     profiles: ["ingest"]
+
+  # dbt (podcasts) — transforma dim_channel/dim_video/fact_* em staging + marts.
+  # Roda depois do `ingest`. Versões de dbt fixas em dbt/requirements.txt,
+  # instaladas na hora (ver nota no Dockerfile sobre por que não ficam na imagem).
+  #   docker compose --profile dbt run --rm dbt
+  dbt:
+    build: .
+    image: youtube-view-counter:latest
+    command: >
+      sh -c "pip install -q -r dbt/requirements.txt &&
+             cd dbt && dbt run --profiles-dir . && dbt test --profiles-dir ."
+    volumes:
+      - ./data:/app/data:z
+    profiles: ["dbt"]
+
+  # Ingestão da Copa 2026 — coleta única e retroativa (não precisa de coletas
+  # repetidas). Grava em data/copa2026.duckdb.
+  #   docker compose --profile copa-ingest run --rm copa-ingest
+  copa-ingest:
+    build: .
+    image: youtube-view-counter:latest
+    command: ["python", "-m", "copa2026.ingest"]
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data:z
+      - ./logs:/app/logs:z
+    profiles: ["copa-ingest"]
+
+  # dbt (Copa 2026) — staging + marts (channel_window_metrics/channel_window_comparison)
+  # em cima de data/copa2026.duckdb. Roda depois do `copa-ingest`.
+  #   docker compose --profile copa-dbt run --rm copa-dbt
+  copa-dbt:
+    build: .
+    image: youtube-view-counter:latest
+    command: >
+      sh -c "pip install -q -r copa2026/dbt/requirements.txt &&
+             cd copa2026/dbt && dbt run --profiles-dir . && dbt test --profiles-dir ."
+    volumes:
+      - ./data:/app/data:z
+    profiles: ["copa-dbt"]

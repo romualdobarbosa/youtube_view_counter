@@ -1,0 +1,39 @@
+version: 2
+
+models:
+  - name: latest_video_metrics
+    description: Último snapshot de cada vídeo, com métricas de engajamento e velocity.
+    columns:
+      - name: video_id
+        tests:
+          - unique
+          - not_null
+      - name: views
+        tests:
+          - not_null
+
+  - name: channel_ranking
+    description: Ranking de canais por views/média/engajamento/vídeos.
+    columns:
+      - name: channel_id
+        tests:
+          - unique
+          - not_null
+
+  - name: short_vs_long
+    description: Participação de shorts vs. longos no catálogo e nas views, por canal.
+    columns:
+      - name: video_type
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['short', 'long']
+
+  - name: channel_growth
+    description: Δ inscritos / views totais entre coletas consecutivas de canal.
+
+  - name: video_growth
+    description: Δ views entre coletas consecutivas de vídeo (velocity).
+
+  - name: upload_cadence
+    description: Cadência de upload e desempenho médio por dia da semana.

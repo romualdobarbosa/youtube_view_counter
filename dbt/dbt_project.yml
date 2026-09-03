@@ -1,0 +1,19 @@
+name: 'podcasts_br'
+version: '1.0.0'
+config-version: 2
+profile: 'podcasts_br'
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  podcasts_br:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: view

@@ -6,5 +6,16 @@ __pycache__/
 .env
 data/
 logs/
-models/
 .pytest_cache/
+
+# dbt
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/.user.yml
+copa2026/dbt/target/
+copa2026/dbt/logs/
+copa2026/dbt/dbt_packages/
+copa2026/dbt/.user.yml
+*.duckdb
+*.duckdb.wal
