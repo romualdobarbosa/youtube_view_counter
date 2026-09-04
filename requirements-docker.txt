@@ -4,6 +4,7 @@
 # `pip install -r requirements.txt` local. Este arquivo só existe para a imagem.
 SQLAlchemy==2.0.48
 duckdb==1.5.5
+sqlalchemy-libsql==0.2.0
 google-api-python-client==2.193.0
 pandas==3.0.1
 plotly==6.6.0

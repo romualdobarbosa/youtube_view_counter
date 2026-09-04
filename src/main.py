@@ -10,9 +10,9 @@ from .database import (
     get_session,
     init_db,
     insert_channel_metrics,
-    insert_video_metrics,
+    insert_video_metrics_batch,
     upsert_channel_scd2,
-    upsert_video_scd2,
+    upsert_videos_scd2_batch,
 )
 
 
@@ -37,11 +37,15 @@ def run(channels: list[str] | None = None) -> None:
                 ch = api.get_channel_full(youtube, handle)
                 channel_key = upsert_channel_scd2(session, ch, collected_at)
                 insert_channel_metrics(session, channel_key, ch, collected_at)
+                # Commit aqui (em vez de só no fim do canal) devolve a conexão pro
+                # pool antes das chamadas de API abaixo, que podem demorar — com
+                # DB_BACKEND=turso isso evita usar uma conexão cujo stream HTTP já
+                # expirou de tanto ficar ociosa (ver pool_pre_ping em database.py).
+                session.commit()
 
                 uploads = ch.get("uploads_playlist_id")
                 if not uploads:
                     logger.warning("  sem playlist de uploads; pulando vídeos")
-                    session.commit()
                     ok_channels += 1
                     continue
 
@@ -49,11 +53,13 @@ def run(channels: list[str] | None = None) -> None:
                 stats = api.get_videos_stats(youtube, video_ids)
                 logger.info("  %d vídeos", len(stats))
 
-                for vid in stats:
-                    video_key = upsert_video_scd2(session, vid, collected_at)
-                    insert_video_metrics(session, video_key, vid, collected_at)
+                # Em lote (1-2 idas ao banco pro canal inteiro, não 1 por vídeo)
+                # — essencial com DB_BACKEND=turso, onde cada ida é um round-trip
+                # de rede (ver database.py::upsert_videos_scd2_batch).
+                video_keys = upsert_videos_scd2_batch(session, stats, collected_at)
+                insert_video_metrics_batch(session, video_keys, stats, collected_at)
 
-                session.commit()  # um commit por canal
+                session.commit()  # segundo commit do canal (métricas dos vídeos)
                 total_videos += len(stats)
                 ok_channels += 1
                 logger.info(

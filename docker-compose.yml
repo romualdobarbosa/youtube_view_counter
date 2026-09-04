@@ -3,7 +3,8 @@ services:
   dashboard:
     build: .
     image: youtube-view-counter:latest
-    command: ["streamlit", "run", "src/dashboard.py", "--server.address=0.0.0.0"]
+    command:
+      ["streamlit", "run", "src/dashboard.py", "--server.address=0.0.0.0"]
     ports:
       - "8501:8501"
     volumes:
@@ -28,13 +29,19 @@ services:
   # dbt (podcasts) — transforma dim_channel/dim_video/fact_* em staging + marts.
   # Roda depois do `ingest`. Versões de dbt fixas em dbt/requirements.txt,
   # instaladas na hora (ver nota no Dockerfile sobre por que não ficam na imagem).
+  # dbt/sync_replica.py roda antes do dbt run: em modo local é no-op (dbt já lê
+  # data/youtube.db direto); em modo Turso (DB_BACKEND=turso no .env) espelha as
+  # tabelas remotas pro arquivo local, porque dbt-sqlite só fala SQLite local.
   #   docker compose --profile dbt run --rm dbt
   dbt:
     build: .
     image: youtube-view-counter:latest
     command: >
       sh -c "pip install -q -r dbt/requirements.txt &&
-             cd dbt && dbt run --profiles-dir . && dbt test --profiles-dir ."
+              python dbt/sync_replica.py &&
+              cd dbt && dbt run --profiles-dir . && dbt test --profiles-dir ."
+    env_file:
+      - .env
     volumes:
       - ./data:/app/data:z
     profiles: ["dbt"]
@@ -61,7 +68,7 @@ services:
     image: youtube-view-counter:latest
     command: >
       sh -c "pip install -q -r copa2026/dbt/requirements.txt &&
-             cd copa2026/dbt && dbt run --profiles-dir . && dbt test --profiles-dir ."
+              cd copa2026/dbt && dbt run --profiles-dir . && dbt test --profiles-dir ."
     volumes:
       - ./data:/app/data:z
     profiles: ["copa-dbt"]

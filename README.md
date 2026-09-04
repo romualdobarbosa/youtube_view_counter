@@ -27,20 +27,20 @@ série histórica. Não dá pra reconstruir uma curva de inscritos retroativa. P
 a métrica usada aqui é **performance por vídeo publicado em 3 janelas de tempo**
 (cadência, views, engajamento, share of voice), não uma curva de crescimento:
 
-| Janela | Período |
-|---|---|
-| Pré-Copa | 01/05/2026 – 10/06/2026 |
-| Copa | 11/06/2026 (abertura) – 19/07/2026 (final) |
-| Pós-Copa | 20/07/2026 – 31/08/2026 |
+| Janela   | Período                                    |
+| -------- | ------------------------------------------ |
+| Pré-Copa | 01/05/2026 – 10/06/2026                    |
+| Copa     | 11/06/2026 (abertura) – 19/07/2026 (final) |
+| Pós-Copa | 20/07/2026 – 31/08/2026                    |
 
 ## O resultado
 
-| Canal | Share of voice (Copa) | Crescimento Copa vs Pré-Copa | Δ engajamento Pós vs Copa |
-|---|---:|---:|---:|
-| **CazéTV** | **94,9 %** | **+1.077 %** (11,8×) | +0,0016 |
-| ge tv | 3,2 % | −54,8 % | −0,0003 |
-| TNT Sports Brasil | 1,8 % | −35,3 % | −0,0062 |
-| N Sports | 0,1 % | −73,3 % | +0,0020 |
+| Canal             | Share of voice (Copa) | Crescimento Copa vs Pré-Copa | Δ engajamento Pós vs Copa |
+| ----------------- | --------------------: | ---------------------------: | ------------------------: |
+| **CazéTV**        |            **94,9 %** |         **+1.077 %** (11,8×) |                   +0,0016 |
+| ge tv             |                 3,2 % |                      −54,8 % |                   −0,0003 |
+| TNT Sports Brasil |                 1,8 % |                      −35,3 % |                   −0,0062 |
+| N Sports          |                 0,1 % |                      −73,3 % |                   +0,0020 |
 
 **CazéTV varreu a Copa** — 94,9% de share of voice entre os 4 canais durante o
 torneio, um salto de quase 12× em relação ao período pré-Copa — e **segurou a
@@ -56,14 +56,42 @@ reais, gerados pelo pipeline abaixo — reproduza com os comandos na seção
 chamada** — pra 4 canais × 3 janelas, isso rapidamente vira milhares de unidades de
 cota (o limite diário padrão é 10.000). Em vez disso, a ingestão reaproveita duas
 funções que **já existiam** em `src/api.py`: `get_channel_full` (resolve o canal e a
-*uploads playlist* numa chamada) e uma nova `get_playlist_video_ids_since`, que pagina
-a *uploads playlist* via `playlistItems.list` (**1 unidade/chamada**) e para assim
+_uploads playlist_ numa chamada) e uma nova `get_playlist_video_ids_since`, que pagina
+a _uploads playlist_ via `playlistItems.list` (**1 unidade/chamada**) e para assim
 que encontra um vídeo mais antigo que o início da janela de análise — não pagina o
 catálogo inteiro de canais com anos de conteúdo. `videos.list` busca estatísticas em
 lotes de 50 (`get_videos_stats`, já existente). Resultado: a coleta real dos 4 canais
 (~9.200 vídeos na janela) custou uma fração da cota de `search.list` pra fazer a
 mesma coisa.
+
 </details>
+
+## Escopo e limitações (o que este número é e o que não é)
+
+O 94,9% é **share of views entre 4 canais brasileiros de esporte no
+YouTube** — não é a fatia da CazéTV na audiência total da Copa. Duas
+fronteiras importam:
+
+**1. O universo é o YouTube, não a Copa.** A verdadeira concorrência da
+CazéTV era a TV aberta (Globo, SBT). A GE TV, inclusive, concentrou a
+audiência digital dela no Globoplay — fora deste recorte. Então o número
+mede "quem dominou o YouTube entre quem apostou no YouTube", não "quem
+dominou a Copa". A CazéTV tinha os direitos integrais dos 104 jogos na
+plataforma; o resultado reflete essa aposta, não repercussão geral.
+
+**2. Medir o impacto real esbarra em fontes fechadas.** Responder "a
+CazéTV incomodou/superou a TV tradicional?" exigiria cruzar três tipos de
+dado heterogêneos, e a ingestão de dois deles é o gargalo real:
+
+| Fonte                           | O que traria                  | Por que fica de fora                                                                                                          |
+| ------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| YouTube Data API                | Views/engajamento (grão fino) | ✅ já ingerido aqui                                                                                                           |
+| Ibope / Kantar                  | Audiência de TV aberta        | Proprietário, sem API — só números soltos na imprensa, em unidade incompatível (pontos da Grande SP × dispositivos nacionais) |
+| Social listening (X, Instagram) | Buzz / menções                | APIs pagas/travadas; T1melens e Comscore usaram ferramenta paga (Brandwatch)                                                  |
+
+Por isso este projeto responde **uma pergunta que os dados sustentam de
+ponta a ponta** ("quem venceu no YouTube?") em vez de forçar um "índice de
+relevância" unificado a partir de métricas que não são comparáveis entre si.
 
 ## Como funciona
 
@@ -157,6 +185,11 @@ src/
     └── 1_🎙️_Podcasts_BR.py  # página secundária: ranking de podcasts
 
 dbt/                  # staging + marts da análise secundária (dbt-sqlite)
+├── sync_replica.py     # Turso -> data/youtube.db local (dbt-sqlite só lê arquivo local)
+└── ...
+
+.github/workflows/
+└── podcasts-ingest.yml # cron diário: ingestão -> Turso -> dbt run/test
 ```
 
 ---
@@ -169,20 +202,65 @@ brasileiros, com dimensões **SCD2** (histórico de atributos que mudam devagar,
 como nome/handle de canal) e fatos de snapshot (métricas coletadas repetidamente ao
 longo do tempo — a diferença de desenho pro caso da Copa, que é uma coleta única).
 6 views analíticas (ranking, shorts vs. longos, cadência de upload, crescimento
-entre coletas) viraram modelos dbt em `dbt/` (adapter `dbt-sqlite`, sobre o mesmo
-`data/youtube.db`).
+entre coletas) viraram modelos dbt em `dbt/` (adapter `dbt-sqlite`).
 
-Acesse pela aba **Podcasts BR** do dashboard, ou:
+**5 canais** (os mais relevantes por inscritos — Podpah, Flow Podcast,
+Inteligência Ltda, AchismosTV, TICARACATICAST), reduzido de uma lista original
+de 19. Motivo real, não estético: medi contra um Turso de verdade e cada escrita
+custa um round-trip de rede (~0,2s, mesmo em lote — `sqlalchemy-libsql` ainda não
+implementa o batching nativo do protocolo Hrana pra INSERT). Os 19 canais
+completos somam ~46 mil vídeos → **horas** por execução; os 5 mais relevantes
+somam ~19,5 mil → minutos a ~1h. `src/database.py::upsert_videos_scd2_batch`
+ainda assim faz 1 SELECT por canal em vez de 1 por vídeo (o ganho real que deu
+pra conseguir) — lista de canais e o porquê de cada um em `src/config.py`.
+
+Roda automaticamente todo dia via **GitHub Actions**
+(`.github/workflows/podcasts-ingest.yml`, cron `0 6 * * *` + disparo manual),
+escrevendo direto num banco **Turso** — o runner do Actions é efêmero, não tem
+onde persistir um arquivo local entre execuções, e é assim que o SCD2 finalmente
+acumula histórico de verdade em vez de depender de coletas manuais esporádicas.
+
+Acesse pela aba **Podcasts BR** do dashboard, ou rode localmente:
 
 ```bash
-python -m src.main                    # coleta (precisa de várias execuções ao longo do tempo)
+# Modo local (padrão) — grava em data/youtube.db, igual sempre foi:
+python -m src.main
 cd dbt && dbt run && dbt test
+
+# Modo Turso (mesmo store usado no Actions) — preencha DB_BACKEND=turso,
+# TURSO_DATABASE_URL e TURSO_AUTH_TOKEN no .env (turso db create / turso db
+# tokens create), depois:
+python -m src.main                    # escreve direto no Turso
+pip install -r dbt/requirements.txt
+python dbt/sync_replica.py            # espelha o Turso pra data/youtube.db local
+cd dbt && dbt run && dbt test          # dbt-sqlite só lê arquivo local, nunca o Turso direto
+
 python -m src.ranking --by views --shorts
 ```
 
 Detalhes de ingestão (retry/backoff, tolerância a falha por canal), SCD2 e Docker
 desse fluxo estão comentados no código (`src/database.py`, `src/main.py`,
 `docker-compose.yml`, profiles `ingest`/`dbt`).
+
+## Por que dois stores (DuckDB pra Copa, Turso pra podcasts)
+
+Não é acaso — é o padrão de acesso de cada análise que decide:
+
+- **Copa 2026 → DuckDB**: coleta **única**, batch, analítica — carrega tudo,
+  faz joins/window functions pesados em memória, persiste o resultado uma vez.
+  Perfil clássico de OLAP local, DuckDB é feito pra isso.
+- **Podcasts → Turso (libSQL)**: coleta **recorrente** (diária, via cron), muitas
+  escritas pequenas ao longo do tempo (um upsert SCD2 por canal/vídeo a cada
+  run), rodando num runner efêmero que não tem disco persistente entre execuções.
+  Perfil transacional clássico de OLTP — precisa de um store gerenciado que
+  sobreviva entre execuções, não um arquivo local que o Actions apagaria a cada
+  vez.
+
+`dbt-sqlite` só fala SQLite local via `sqlite3` — não existe adapter dbt pra
+libSQL remoto. Por isso `dbt/sync_replica.py` espelha as tabelas do Turso pra um
+arquivo local (via SQLAlchemy Core, reaproveitando o schema de `Base.metadata`
+em `src/database.py`) antes de cada `dbt run` — a leitura do dbt nunca muda
+(`dbt/profiles.yml` aponta pro arquivo local sempre, venha ele de onde vier).
 
 ---
 
@@ -209,6 +287,8 @@ as suas próprias dependências na hora de rodar, em vez de tudo pré-instalado 
 
 - [x] dbt como camada de transformação (staging + marts + testes) nas duas análises
 - [x] Testes automatizados das funções de upsert SCD2 (podcasts)
-- [ ] Agendar a ingestão de podcasts (cron / GitHub Actions) pra alimentar o
+- [x] Store gerenciado (Turso/libSQL) pra podcasts, configurável por env var
+      (`DB_BACKEND`), com fallback local pra dev
+- [x] Agendar a ingestão de podcasts (cron / GitHub Actions) pra alimentar o
       histórico SCD2 automaticamente
 - [ ] Expandir a análise da Copa pra outros eventos datados (eleições, Olimpíadas)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import ssl
 from datetime import date, datetime
 from typing import Any
 
@@ -44,7 +45,13 @@ def build_client():
 
 
 def _is_transient(exc: BaseException) -> bool:
-    """True para erros recuperáveis: 5xx do servidor e 403 de quota transitória."""
+    """True para erros recuperáveis: 5xx do servidor, 403 de quota transitória, e
+    falhas de conexão (a mesma conexão HTTP fica ociosa entre canais — um canal
+    grande pode levar dezenas de minutos só gravando no banco antes de voltar a
+    chamar a API — e cai com BrokenPipeError/SSLError/timeout antes da próxima
+    chamada; validado num run real contra o Turso)."""
+    if isinstance(exc, (ConnectionError, ssl.SSLError, TimeoutError)):
+        return True
     if not isinstance(exc, HttpError):
         return False
     status = getattr(exc.resp, "status", None)
