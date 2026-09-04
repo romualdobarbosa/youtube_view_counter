@@ -28,9 +28,15 @@ models:
       - name: channel_key
         tests:
           - not_null
+          # Aponta pra source (todas as versões), não pra stg_channels (só a
+          # vigente): um fato antigo referencia legitimamente uma versão do
+          # canal que já deixou de ser is_current — isso é o SCD2 funcionando
+          # certo, não um dado quebrado. Testado contra Turso real: um teste
+          # apontando pra stg_channels/stg_videos falha assim que qualquer
+          # atributo versionado muda entre coletas.
           - relationships:
               arguments:
-                to: ref('stg_channels')
+                to: source('raw', 'dim_channel')
                 field: channel_key
 
   - name: stg_video_metrics
@@ -41,5 +47,5 @@ models:
           - not_null
           - relationships:
               arguments:
-                to: ref('stg_videos')
+                to: source('raw', 'dim_video')
                 field: video_key
