@@ -26,3 +26,4 @@ airflow_settings.yaml
 webserver_config.py
 airflow.cfg
 airflow.db
+airflow/include/repo/
