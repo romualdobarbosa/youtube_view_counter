@@ -151,10 +151,14 @@ docker compose up -d dashboard                               # http://localhost:
 Dashboard publicado em share.streamlit.io a partir deste repo:
 
 - **Main file path**: `src/dashboard.py`
-- **Python dependencies path** (Advanced settings): `requirements-docker.txt` — o
-  `requirements.txt` da raiz é o pip freeze completo do ambiente de dev (Jupyter
-  etc.), grande demais pro deploy; `requirements-docker.txt` já é o subconjunto
-  enxuto validado na imagem Docker.
+- **Python version** (Advanced settings): `3.11` — mesma versão do `Dockerfile`
+  e dos workflows do GitHub Actions.
+- **Dependências**: o Streamlit Cloud instala o `requirements.txt` da mesma
+  pasta do main file antes de cair pro da raiz — por isso existe
+  `src/requirements.txt`, que só aponta (`-r ../requirements-docker.txt`) pro
+  enxuto já validado na imagem Docker. O `requirements.txt` da raiz é o pip
+  freeze completo do ambiente de dev (Jupyter etc.) e não instala no Cloud —
+  tem pacote (`ipython==9.11.0`) que exige Python≥3.12.
 - **Secrets** (painel da app, não commitado): `DB_BACKEND = "turso"`,
   `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` — as mesmas credenciais usadas pelo
   cron de ingestão (`.github/workflows/podcasts-ingest.yml`), pra página

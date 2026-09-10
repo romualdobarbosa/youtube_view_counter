@@ -1,0 +1,5 @@
+# Streamlit Community Cloud usa o requirements.txt na mesma pasta do main
+# script (src/dashboard.py) em vez do da raiz — que é o pip freeze completo do
+# ambiente de dev e não instala (ipython==9.11.0 exige Python>=3.12). Só
+# reaponta pro enxuto já validado no Dockerfile, sem duplicar a lista.
+-r ../requirements-docker.txt
