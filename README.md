@@ -14,6 +14,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+![Airflow](https://img.shields.io/badge/Airflow-017CEE?logo=apacheairflow&logoColor=white)
 [![Testes](https://github.com/romualdobarbosa/youtube_view_counter/actions/workflows/tests.yml/badge.svg)](https://github.com/romualdobarbosa/youtube_view_counter/actions/workflows/tests.yml)
 
 ---
@@ -173,6 +174,30 @@ Dashboard publicado em share.streamlit.io a partir deste repo:
   então não há reingestão automática: pra atualizar, roda `copa2026/ingest.py` +
   `dbt run` local e commita o `.duckdb` de novo.
 
+### Airflow (Astro CLI)
+
+`airflow/` isola um segundo projeto Astro/Airflow que reimplementa as duas
+ingestões como DAGs, validadas rodando de ponta a ponta via `astro dev start`:
+
+- **`podcasts_ingest_dbt`** — mesmo cron (`0 6 * * *`) e mesmos passos do
+  `podcasts-ingest.yml`: ingestão → Turso → `dbt run`/`dbt test`.
+- **`copa2026_ingest_dbt`** — coleta única e retroativa, `schedule=None`,
+  disparo manual pela UI (equivalente aos profiles `copa-ingest`/`copa-dbt`
+  do `docker-compose.yml`).
+
+O mesmo conflito de versão do dbt (ver [Sobre as versões do
+dbt](#sobre-as-versões-do-dbt-e-por-que-são-dois-projetos-separados)) reaparece
+aqui e é resolvido com uma venv por projeto, construída em build-time no
+`airflow/Dockerfile` (`dbt_venvs/podcasts` e `dbt_venvs/copa2026`), isoladas
+entre si e do ambiente principal do Airflow.
+
+**Não é o orquestrador em produção** — quem roda a ingestão de verdade hoje é o
+GitHub Actions (`.github/workflows/podcasts-ingest.yml`, seção
+[Podcasts BR](#podcasts-br-segunda-análise-mesmo-pipeline) abaixo). Este projeto
+Astro fica rodando localmente (`cd airflow && astro dev start`) como uma segunda
+implementação da mesma orquestração — decisão de onde hospedar em produção
+ainda em aberto.
+
 ## Modelo de dados
 
 ```
@@ -189,35 +214,42 @@ channel_window_comparison    -- 1 linha por canal, janelas lado a lado + deltas
 ## Testes
 
 ```bash
-pytest                                          # ingestão (mockada) + upserts SCD2 (análise secundária)
-cd copa2026/dbt && dbt test                     # schema tests + teste de grão único (channel_id, time_window)
-cd dbt && dbt test                               # análise secundária: schema tests + invariante SCD2
+pytest                        # ingestão (mockada) + upserts SCD2 (análise secundária)
+cd copa2026/dbt && dbt test  # schema tests + teste de grão único (channel_id, time_window)
+cd dbt && dbt test           # schema tests + invariante SCD2 (podcasts)
 ```
 
 ## Estrutura
 
 ```
 copa2026/
-├── config.py       # canais, janelas de data, caminho do DuckDB
-├── ingest.py        # orquestração da coleta (reaproveita src/api.py)
-└── dbt/              # staging + marts (dbt-duckdb)
+├── config.py  # canais, janelas de data, caminho do DuckDB
+├── ingest.py  # orquestração da coleta (reaproveita src/api.py)
+└── dbt/       # staging + marts (dbt-duckdb)
 
 src/
-├── api.py           # cliente YouTube Data API v3 (compartilhado pelas 2 análises)
-├── config.py         # credenciais, canais de podcast, logging
-├── database.py        # modelos ORM + upserts SCD2 (análise secundária)
-├── main.py             # orquestração da ingestão de podcasts
-├── ranking.py            # CLI de ranking de podcasts
-├── dashboard.py            # dashboard Streamlit — página padrão: Copa 2026
+├── api.py                   # cliente YouTube Data API v3 (compartilhado pelas 2 análises)
+├── config.py                # credenciais, canais de podcast, logging
+├── database.py              # modelos ORM + upserts SCD2 (análise secundária)
+├── main.py                  # orquestração da ingestão de podcasts
+├── ranking.py               # CLI de ranking de podcasts
+├── dashboard.py             # dashboard Streamlit — página padrão: Copa 2026
 └── pages/
     └── 1_🎙️_Podcasts_BR.py  # página secundária: ranking de podcasts
 
-dbt/                  # staging + marts da análise secundária (dbt-sqlite)
-├── sync_replica.py     # Turso -> data/youtube.db local (dbt-sqlite só lê arquivo local)
+dbt/                        # staging + marts da análise secundária (dbt-sqlite)
+├── sync_replica.py         # Turso -> data/youtube.db local (dbt-sqlite só lê arquivo local)
+├── push_marts_to_turso.py  # materializa os marts como tabelas no Turso (dashboard remoto lê daqui)
 └── ...
 
+airflow/                        # projeto Astro/Airflow — orquestração alternativa (ver seção acima)
+└── dags/
+    ├── podcasts_ingest_dbt.py  # mesmo cron/passos do workflow abaixo
+    └── copa2026_ingest_dbt.py  # disparo manual, mesma ingestão única
+
 .github/workflows/
-└── podcasts-ingest.yml # cron diário: ingestão -> Turso -> dbt run/test
+├── podcasts-ingest.yml  # cron diário: ingestão -> Turso -> dbt run/test -> push dos marts
+└── tests.yml            # pytest em todo push/PR
 ```
 
 ---
@@ -230,7 +262,8 @@ brasileiros, com dimensões **SCD2** (histórico de atributos que mudam devagar,
 como nome/handle de canal) e fatos de snapshot (métricas coletadas repetidamente ao
 longo do tempo — a diferença de desenho pro caso da Copa, que é uma coleta única).
 6 views analíticas (ranking, shorts vs. longos, cadência de upload, crescimento
-entre coletas) viraram modelos dbt em `dbt/` (adapter `dbt-sqlite`).
+entre coletas) viraram modelos dbt em `dbt/` (adapter `dbt-sqlite`). Modelo
+dimensional (2 dims SCD2 + 2 fatos de snapshot) documentado em `esquema.sql`.
 
 **5 canais** (os mais relevantes por inscritos — Podpah, Flow Podcast,
 Inteligência Ltda, AchismosTV, TICARACATICAST), reduzido de uma lista original
@@ -313,16 +346,6 @@ em `src/database.py`) antes de cada `dbt run` — a leitura do dbt nunca muda
 Por isso os dois `requirements.txt` de dbt ficam fora do `requirements-docker.txt`
 da imagem principal: cada serviço do `docker-compose.yml` (`dbt`/`copa-dbt`) instala
 as suas próprias dependências na hora de rodar, em vez de tudo pré-instalado num
-único ambiente onde elas colidiriam.
-
-## Roadmap
-
-- [x] dbt como camada de transformação (staging + marts + testes) nas duas análises
-- [x] Testes automatizados das funções de upsert SCD2 (podcasts)
-- [x] Store gerenciado (Turso/libSQL) pra podcasts, configurável por env var
-      (`DB_BACKEND`), com fallback local pra dev
-- [x] Agendar a ingestão de podcasts (cron / GitHub Actions) pra alimentar o
-      histórico SCD2 automaticamente
-- [x] CI (GitHub Actions) rodando a suíte de testes em todo push/PR
-- [x] Dashboard publicado no Streamlit Community Cloud
-- [ ] Expandir a análise da Copa pra outros eventos datados (eleições, Olimpíadas)
+único ambiente onde elas colidiriam. O mesmo conflito de versão se repete no
+[Airflow](#airflow-astro-cli) e é resolvido do mesmo jeito: uma venv por
+projeto dbt.
