@@ -19,3 +19,11 @@ copa2026/dbt/dbt_packages/
 copa2026/dbt/.user.yml
 *.duckdb
 *.duckdb.wal
+
+# airflow / astro cli (logs/ já coberto acima)
+.astro/
+airflow_settings.yaml
+webserver_config.py
+airflow.cfg
+airflow.db
+airflow/include/repo/
