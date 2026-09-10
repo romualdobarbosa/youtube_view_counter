@@ -4,7 +4,7 @@ __pycache__/
 .ipynb_checkpoints/
 .data/
 .env
-data/
+data/*
 logs/
 .pytest_cache/
 
@@ -19,6 +19,11 @@ copa2026/dbt/dbt_packages/
 copa2026/dbt/.user.yml
 *.duckdb
 *.duckdb.wal
+
+# Exceção: dados finais da Copa 2026 são históricos (janelas já no passado) e
+# não têm store gerenciado como o Turso dos podcasts — commitado estático pra
+# o Streamlit Cloud servir sem precisar reingerir (ver README > Streamlit Cloud).
+!data/copa2026.duckdb
 
 # airflow / astro cli (logs/ já coberto acima)
 .astro/

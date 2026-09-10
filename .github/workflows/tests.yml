@@ -1,0 +1,28 @@
+name: Testes (pytest)
+
+# CI rápida: roda a suíte tests/ a cada push/PR. Não bate na YouTube API de
+# verdade (mockada em tests/test_ingestion.py) nem precisa de credenciais —
+# cada teste isola seu próprio SQLite temporário (tests/conftest.py).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instala dependências
+        run: |
+          pip install -r requirements-docker.txt
+          pip install pytest
+
+      - name: pytest
+        run: pytest
