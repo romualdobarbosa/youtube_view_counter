@@ -12,6 +12,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+[![Testes](https://github.com/romualdobarbosa/youtube_view_counter/actions/workflows/tests.yml/badge.svg)](https://github.com/romualdobarbosa/youtube_view_counter/actions/workflows/tests.yml)
 
 ---
 
@@ -144,6 +145,26 @@ docker compose --profile copa-ingest run --rm copa-ingest   # coleta
 docker compose --profile copa-dbt run --rm copa-dbt         # staging + marts
 docker compose up -d dashboard                               # http://localhost:8501
 ```
+
+### Streamlit Community Cloud
+
+Dashboard publicado em share.streamlit.io a partir deste repo:
+
+- **Main file path**: `src/dashboard.py`
+- **Python dependencies path** (Advanced settings): `requirements-docker.txt` — o
+  `requirements.txt` da raiz é o pip freeze completo do ambiente de dev (Jupyter
+  etc.), grande demais pro deploy; `requirements-docker.txt` já é o subconjunto
+  enxuto validado na imagem Docker.
+- **Secrets** (painel da app, não commitado): `DB_BACKEND = "turso"`,
+  `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` — as mesmas credenciais usadas pelo
+  cron de ingestão (`.github/workflows/podcasts-ingest.yml`), pra página
+  **Podcasts BR** ler ao vivo do mesmo banco que o Actions alimenta.
+- **Copa 2026**: não depende de secret nenhum — lê `data/copa2026.duckdb`, que é
+  commitado no repo (exceção deliberada ao `*.duckdb` do `.gitignore`, ver linha
+  correspondente). Dados históricos (janelas já no passado, coleta única — ver
+  [Por que dois stores](#por-que-dois-stores-duckdb-pra-copa-turso-pra-podcasts)),
+  então não há reingestão automática: pra atualizar, roda `copa2026/ingest.py` +
+  `dbt run` local e commita o `.duckdb` de novo.
 
 ## Modelo de dados
 
@@ -291,4 +312,6 @@ as suas próprias dependências na hora de rodar, em vez de tudo pré-instalado 
       (`DB_BACKEND`), com fallback local pra dev
 - [x] Agendar a ingestão de podcasts (cron / GitHub Actions) pra alimentar o
       histórico SCD2 automaticamente
+- [x] CI (GitHub Actions) rodando a suíte de testes em todo push/PR
+- [ ] Dashboard publicado no Streamlit Community Cloud
 - [ ] Expandir a análise da Copa pra outros eventos datados (eleições, Olimpíadas)
