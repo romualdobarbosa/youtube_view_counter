@@ -2,8 +2,11 @@ name: Ingestão de podcasts (SCD2 + dbt)
 
 # Coleta os canais de podcast (src/main.py), escreve no Turso (DB_BACKEND=turso) e
 # roda a camada dbt (dbt/) por cima — schema tests + os 2 testes singulares que
-# validam a invariante SCD2. Roda diário; o runner é efêmero, a persistência vive
-# no Turso (ver README > "Por que dois stores").
+# validam a invariante SCD2. Os marts do dbt (dbt/push_marts_to_turso.py) também
+# são empurrados pro Turso como tabelas — dbt-sqlite só grava local, e sem esse
+# passo um consumidor remoto (dashboard no Streamlit Cloud) nunca veria os marts.
+# Roda diário; o runner é efêmero, a persistência vive no Turso (ver README >
+# "Por que dois stores").
 
 on:
   schedule:
@@ -45,3 +48,11 @@ jobs:
 
       - name: dbt run + dbt test
         run: cd dbt && dbt run --profiles-dir . && dbt test --profiles-dir .
+
+      # O passo do dbt pode ter puxado outra versão de SQLAlchemy — reinstala
+      # pra garantir o par testado com sqlalchemy-libsql antes do push abaixo.
+      - name: Reinstala dependências enxutas
+        run: pip install -r requirements-docker.txt
+
+      - name: Materializa os marts do dbt no Turso (dashboard remoto lê daqui)
+        run: python dbt/push_marts_to_turso.py
