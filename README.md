@@ -259,6 +259,10 @@ python -m src.main                    # escreve direto no Turso
 pip install -r dbt/requirements.txt
 python dbt/sync_replica.py            # espelha o Turso pra data/youtube.db local
 cd dbt && dbt run && dbt test          # dbt-sqlite só lê arquivo local, nunca o Turso direto
+python dbt/push_marts_to_turso.py     # materializa os marts como tabelas no Turso
+                                       # (dbt-sqlite não escreve remoto — sem isso um
+                                       # consumidor que lê só o Turso, ex. Streamlit
+                                       # Cloud, não vê os marts, só as tabelas raw)
 
 python -m src.ranking --by views --shorts
 ```
