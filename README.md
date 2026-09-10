@@ -5,6 +5,8 @@
 > uma pergunta datada e específica — CazéTV, GE TV, N Sports e TNT Sports Brasil,
 > quem dominou a Copa 2026 e quem segurou a audiência depois que ela acabou?
 
+**🔗 App publicado: [youtubeviewcounter.streamlit.app](https://youtubeviewcounter.streamlit.app/)**
+
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![dbt](https://img.shields.io/badge/dbt-FF694B?logo=dbt&logoColor=white)
 ![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?logo=duckdb&logoColor=black)
@@ -149,6 +151,7 @@ docker compose up -d dashboard                               # http://localhost:
 ### Streamlit Community Cloud
 
 Dashboard publicado em share.streamlit.io a partir deste repo:
+**https://youtubeviewcounter.streamlit.app/**
 
 - **Main file path**: `src/dashboard.py`
 - **Python version** (Advanced settings): `3.11` — mesma versão do `Dockerfile`
@@ -321,5 +324,5 @@ as suas próprias dependências na hora de rodar, em vez de tudo pré-instalado 
 - [x] Agendar a ingestão de podcasts (cron / GitHub Actions) pra alimentar o
       histórico SCD2 automaticamente
 - [x] CI (GitHub Actions) rodando a suíte de testes em todo push/PR
-- [ ] Dashboard publicado no Streamlit Community Cloud
+- [x] Dashboard publicado no Streamlit Community Cloud
 - [ ] Expandir a análise da Copa pra outros eventos datados (eleições, Olimpíadas)
