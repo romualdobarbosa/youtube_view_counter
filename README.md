@@ -91,7 +91,7 @@ dado heterogêneos, e a ingestão de dois deles é o gargalo real:
 | ------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | YouTube Data API                | Views/engajamento (grão fino) | ✅ já ingerido aqui                                                                                                           |
 | Ibope / Kantar                  | Audiência de TV aberta        | Proprietário, sem API — só números soltos na imprensa, em unidade incompatível (pontos da Grande SP × dispositivos nacionais) |
-| Social listening (X, Instagram) | Buzz / menções                | APIs pagas/travadas; T1melens e Comscore usaram ferramenta paga (Brandwatch)                                                  |
+| Social listening (X, Instagram) | Buzz / menções                | APIs pagas e travadas                                                                                                          |
 
 Por isso este projeto responde **uma pergunta que os dados sustentam de
 ponta a ponta** ("quem venceu no YouTube?") em vez de forçar um "índice de
